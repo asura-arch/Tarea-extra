@@ -1,0 +1,85 @@
+import pandas as pd
+import polars as pl
+import numpy as np
+import time
+
+# Creación de datos de ejemplo
+np.random.seed(42)
+size = 1_000_000
+
+data = {
+    'id': np.arange(size),
+    'category': np.random.choice(['A', 'B', 'C', 'D'], size),
+    'value1': np.random.normal(0, 1, size),
+    'value2': np.random.randint(0, 100, size)
+}
+
+# Operaciones con Pandas
+def pandas_operations():
+    print("\nOperaciones con Pandas:")
+    start = time.time()
+    
+    # Creación de DataFrame
+    df_pd = pd.DataFrame(data)
+    
+    # Filtrado
+    filtered_pd = df_pd[df_pd['category'].isin(['A', 'B'])]
+    
+    # Agregación
+    agg_pd = df_pd.groupby('category').agg({
+        'value1': ['mean', 'std'],
+        'value2': ['sum', 'min', 'max']
+    })
+    
+    # Ordenamiento
+    sorted_pd = df_pd.sort_values(by='value2', ascending=False)
+    
+    # Operación de columna
+    df_pd['value_ratio'] = df_pd['value1'] / (df_pd['value2'] + 1)
+    
+    end = time.time()
+    print(f"Tiempo Pandas: {end - start:.4f} segundos")
+    return agg_pd
+
+# Operaciones con Polars
+def polars_operations():
+    print("\nOperaciones con Polars:")
+    start = time.time()
+    
+    # Creación de DataFrame
+    df_pl = pl.DataFrame(data)
+    
+    # Filtrado
+    filtered_pl = df_pl.filter(pl.col('category').is_in(['A', 'B']))
+    
+    # Agregación
+    agg_pl = df_pl.group_by('category').agg([
+        pl.col('value1').mean().alias('mean_value1'),
+        pl.col('value1').std().alias('std_value1'),
+        pl.col('value2').sum().alias('sum_value2'),
+        pl.col('value2').min().alias('min_value2'),
+        pl.col('value2').max().alias('max_value2')
+    ])
+    
+    # Ordenamiento
+    sorted_pl = df_pl.sort(by='value2', descending=True)
+    
+    # Operación de columna
+    df_pl = df_pl.with_columns(
+        (pl.col('value1') / (pl.col('value2') + 1)).alias('value_ratio')
+    )
+    
+    end = time.time()
+    print(f"Tiempo Polars: {end - start:.4f} segundos")
+    return agg_pl
+
+# Ejecutar y comparar
+if __name__ == "__main__":
+    pd_agg = pandas_operations()
+    pl_agg = polars_operations()
+    
+    print("\nResultados de agregación en Pandas:")
+    print(pd_agg)
+    
+    print("\nResultados de agregación en Polars:")
+    print(pl_agg)
